@@ -1,0 +1,1 @@
+A scalable B2C ecommerce platform with a React SPA frontend, Node/Express REST API backend, and PostgreSQL database. Covers the full shopping lifecycle from product discovery to order fulfillment.
