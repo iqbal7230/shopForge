@@ -61,3 +61,13 @@ export const login = async (req, res) => {
         res.status(500).json({ error: "login error " })
     }
 }      
+
+export const logout = (req, res)=>{
+    // pending
+}
+export const refresh =()=>{
+     // pending
+}
+export const forgetPassword =()=>{
+     // pending
+}
