@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,46 +6,249 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  password     String
-  full_name    String
-  role         Role
-  avatar_url   String?
-  is_verified  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-}
-
 enum Role {
   USER
   ADMIN
 }
 
-model Category {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String   @db.VarChar(100)
-  slug      String   @unique @db.VarChar(100)
-  parent_id String?  @db.Uuid
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
 
-  // Self-relation
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+model User {
+  id                        Int       @id @default(autoincrement())
+  email                     String    @unique @db.VarChar(255)
+  password                  String
+  full_name                 String    @db.VarChar(255)
+  phone                     String?   @db.VarChar(20)
+  avatar_url                String?
+  role                      Role      @default(USER)
+  is_verified               Boolean   @default(false)
+  refresh_tokens            String[]
+  email_verification_token  String?   @unique
+  password_reset_token      String?   @unique
+  password_reset_expires    DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  // Relations
+  carts                     Cart[]
+  orders                    Order[]
+  reviews                   Review[]
+  wishlist_items            Wishlist[]
+  addresses                 Address[]
+  return_requests           ReturnRequest[]
+}
+
+model Category {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @db.VarChar(100)
+  slug      String    @unique @db.VarChar(100)
+  parent_id String?   @db.Uuid
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
   parent    Category? @relation("CategoryHierarchy", fields: [parent_id], references: [id])
   children  Category[] @relation("CategoryHierarchy")
-
-  // Relation with products
   products  Product[]
 }
 
 model Product {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String   @db.VarChar(255)
-  slug          String   @unique @db.VarChar(255)
-  description   String?  @db.Text
-  price         Decimal  @db.Decimal(10, 2)
-  compare_price Decimal? @db.Decimal(10, 2)
-  category_id   String?  @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String    @db.VarChar(255)
+  slug          String    @unique @db.VarChar(255)
+  description   String?   @db.Text
+  price         Decimal   @db.Decimal(10, 2)
+  compare_price Decimal?  @db.Decimal(10, 2)
+  category_id   String?   @db.Uuid
+  stock_qty     Int       @default(0)
+  images        Json?     @db.JsonB
+  is_deleted    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   category      Category? @relation(fields: [category_id], references: [id])
-  stock_qty     Int      @default(0)
-  images        Json?    @db.JsonB
-  is_deleted    Boolean  @default(false)
+  variants      ProductVariant[]
+  reviews       Review[]
+  cart_items    CartItem[]
+  order_items   OrderItem[]
+  wishlist_items Wishlist[]
+}
+
+model ProductVariant {
+  id          String    @id @default(uuid()) @db.Uuid
+  product_id  String    @db.Uuid
+  sku         String    @unique @db.VarChar(100)
+  size        String?   @db.VarChar(50)
+  color       String?   @db.VarChar(50)
+  stock       Int       @default(0)
+  price       Decimal?  @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product     Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  cart_items  CartItem[]
+  order_items OrderItem[]
+}
+
+model Review {
+  id          String    @id @default(uuid()) @db.Uuid
+  product_id  String    @db.Uuid
+  user_id     Int
+  rating      Int       @db.SmallInt
+  title       String?   @db.VarChar(255)
+  content     String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product     Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([product_id, user_id])
+  @@index([product_id])
+}
+
+model Cart {
+  id          String    @id @default(uuid()) @db.Uuid
+  user_id     Int?
+  session_id  String?   @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  items       CartItem[]
+}
+
+model CartItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  cart_id     String    @db.Uuid
+  product_id  String    @db.Uuid
+  variant_id  String?   @db.Uuid
+  quantity    Int       @default(1)
+  price       Decimal   @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  cart        Cart      @relation(fields: [cart_id], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  variant     ProductVariant? @relation(fields: [variant_id], references: [id], onDelete: SetNull)
+}
+
+model Wishlist {
+  id          String    @id @default(uuid()) @db.Uuid
+  user_id     Int
+  product_id  String    @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id])
+}
+
+model Address {
+  id          String    @id @default(uuid()) @db.Uuid
+  user_id     Int
+  full_name   String    @db.VarChar(255)
+  phone       String    @db.VarChar(20)
+  street      String    @db.VarChar(255)
+  city        String    @db.VarChar(100)
+  state       String    @db.VarChar(100)
+  postal_code String    @db.VarChar(10)
+  country     String    @db.VarChar(100)
+  is_default  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Coupon {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique @db.VarChar(50)
+  type        CouponType
+  value       Decimal   @db.Decimal(10, 2)
+  min_purchase Decimal? @db.Decimal(10, 2)
+  max_discount Decimal? @db.Decimal(10, 2)
+  usage_limit Int?
+  usage_count Int       @default(0)
+  expires_at  DateTime?
+  is_active   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  orders      Order[]
+}
+
+model Order {
+  id                String      @id @default(uuid()) @db.Uuid
+  user_id           Int?
+  cart_id           String?     @db.Uuid
+  order_number      String      @unique @db.VarChar(50)
+  status            OrderStatus @default(PENDING)
+  payment_status    PaymentStatus @default(PENDING)
+  subtotal          Decimal     @db.Decimal(10, 2)
+  shipping_cost     Decimal     @db.Decimal(10, 2)
+  tax_amount        Decimal     @default(0) @db.Decimal(10, 2)
+  discount_amount   Decimal     @default(0) @db.Decimal(10, 2)
+  total_amount      Decimal     @db.Decimal(10, 2)
+  coupon_id         String?     @db.Uuid
+  shipping_address  Json        @db.JsonB
+  tracking_number   String?     @db.VarChar(100)
+  notes             String?     @db.Text
+  stripe_payment_id String?     @db.VarChar(255)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  user              User?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  items             OrderItem[]
+  coupon            Coupon?     @relation(fields: [coupon_id], references: [id], onDelete: SetNull)
+  return_requests   ReturnRequest[]
+}
+
+model OrderItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  order_id    String    @db.Uuid
+  product_id  String    @db.Uuid
+  variant_id  String?   @db.Uuid
+  quantity    Int
+  price       Decimal   @db.Decimal(10, 2)
+  product_snapshot Json  @db.JsonB
+  createdAt   DateTime  @default(now())
+
+  order       Order     @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  variant     ProductVariant? @relation(fields: [variant_id], references: [id], onDelete: SetNull)
+}
+
+model ReturnRequest {
+  id          String    @id @default(uuid()) @db.Uuid
+  order_id    String    @db.Uuid
+  user_id     Int
+  reason      String    @db.Text
+  status      String    @default("PENDING") @db.VarChar(50)
+  refund_amount Decimal @db.Decimal(10, 2)
+  return_photos Json?   @db.JsonB
+  admin_notes String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  order       Order     @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
