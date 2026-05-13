@@ -22,8 +22,10 @@ export default function Navbar() {
   const { isAuthenticated, user } = useAuth();
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const handleResize = () => setMenuOpen(false);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -98,7 +100,7 @@ export default function Navbar() {
             className="inline-flex h-11 items-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-sm font-medium text-stone-700 transition hover:border-stone-300 hover:bg-stone-100"
           >
             <User2 className="h-4 w-4" />
-            <span className="hidden sm:inline">{isAuthenticated ? user?.full_name ?? 'Account' : 'Sign in'}</span>
+            <span className="hidden sm:inline">{isMounted ? (isAuthenticated ? user?.full_name ?? 'Account' : 'Sign in') : 'Account'}</span>
             <Menu className="h-4 w-4" />
           </button>
 

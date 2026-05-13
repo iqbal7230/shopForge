@@ -126,7 +126,7 @@ export default function ProductDetailPage() {
       <div className="mt-4 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         <section className="rounded-[2rem] border border-stone-200 bg-white p-5 shadow-lg shadow-stone-950/5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            {product.images.map((label, index) => (
+            {(product.images?.urls || []).map((label, index) => (
               <div key={label} className={`flex min-h-44 items-end rounded-[1.5rem] p-4 text-white ${index === 0 ? 'bg-stone-950' : index === 1 ? 'bg-stone-800' : 'bg-stone-600'}`}>
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-stone-300">Image {index + 1}</p>
@@ -158,13 +158,13 @@ export default function ProductDetailPage() {
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-stone-950">{product.name}</h1>
           <div className="mt-3 flex items-center gap-2 text-sm text-stone-600">
             <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-            {product.average_rating.toFixed(1)} · {product.review_count} reviews
+            {(product.average_rating ?? 0).toFixed(1)} · {product.review_count ?? 0} reviews
           </div>
           <p className="mt-5 text-3xl font-semibold text-stone-950">{formatPrice(product.price)}</p>
           <p className="mt-2 text-sm leading-6 text-stone-600">{product.description}</p>
 
           <ul className="mt-6 grid gap-3 text-sm text-stone-700">
-            {product.features.map((feature) => (
+            {(product.features ?? []).map((feature) => (
               <li key={feature} className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
                 <span className="h-2 w-2 rounded-full bg-orange-500" />
                 {feature}

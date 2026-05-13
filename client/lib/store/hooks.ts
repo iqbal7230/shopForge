@@ -10,3 +10,4 @@ export const useCart = () => useAppSelector(state => state.cart);
 export const useUser = () => useAppSelector(state => state.user);
 export const useProduct = () => useAppSelector(state => state.product);
 export const useOrder = () => useAppSelector(state => state.order);
+export const useAdmin = () => useAppSelector(state => state.admin);
